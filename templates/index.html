@@ -1,0 +1,182 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>市场分析 - 大盘指标 · 短线情绪 · 板块代码</title>
+    <script src="{% static 'echarts.min.js' %}"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            color: #303133;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        /* SimpleUI 风格顶栏 */
+        .page-header {
+            background: #fff;
+            border-bottom: 1px solid #e6e6e6;
+            padding: 0 24px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+            color: #303133;
+        }
+        /* Tab 栏：与 SimpleUI/Element 一致 */
+        .tabs-wrap {
+            background: #fff;
+            padding: 0 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .tabs {
+            display: flex;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            gap: 0;
+        }
+        .tabs .tab-item {
+            padding: 0 20px;
+            height: 40px;
+            line-height: 40px;
+            cursor: pointer;
+            color: #606266;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tabs .tab-item:hover {
+            color: #409EFF;
+        }
+        .tabs .tab-item.active {
+            color: #409EFF;
+            font-weight: 500;
+            border-bottom-color: #409EFF;
+        }
+        /* 内容区 */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 24px;
+        }
+        .tab-panel {
+            display: none;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 400px;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        .module-placeholder {
+            color: #909399;
+            font-size: 14px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .short-emotion-charts {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .short-emotion-charts .up-down-draggable-container,
+        .short-emotion-charts .up-down-floor-draggable-container,
+        .short-emotion-charts .total-floor-draggable-container {
+            max-width: 100%;
+        }
+        .nav-links {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e6e6e6;
+            font-size: 13px;
+        }
+        .nav-links a {
+            color: #409EFF;
+            text-decoration: none;
+            margin-right: 16px;
+        }
+        .nav-links a:hover { color: #66b1ff; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <h1>市场分析</h1>
+    </header>
+
+    <div class="tabs-wrap">
+        <ul class="tabs" role="tablist">
+            <li class="tab-item active" data-tab="market" role="tab">大盘指标</li>
+            <li class="tab-item" data-tab="short-emotion" role="tab">短线情绪</li>
+            <li class="tab-item" data-tab="sector" role="tab">板块代码</li>
+        </ul>
+    </div>
+
+    <main class="container">
+        <div id="panel-market" class="tab-panel active" role="tabpanel">
+            <div class="module-placeholder">大盘涨跌、指数、成交量等指标（敬请期待）</div>
+        </div>
+
+        <div id="panel-short-emotion" class="tab-panel" role="tabpanel">
+            <div class="short-emotion-charts">
+                {% include 'up_down_line_chart.html' %}
+                {% include 'up_down_floor_line_chart.html' %}
+                {% include 'total_floor_line_chart.html' %}
+            </div>
+        </div>
+
+        <div id="panel-sector" class="tab-panel" role="tabpanel">
+            <div class="module-placeholder">板块与个股代码查询（敬请期待）</div>
+        </div>
+    </main>
+
+    <script>
+    (function() {
+        var tabs = document.querySelectorAll('.tab-item');
+        var panels = document.querySelectorAll('.tab-panel');
+        var chartDomIds = ['up-down-main', 'up-down-floor-main', 'total-floor-main'];
+
+        function showPanel(tabName) {
+            tabs.forEach(function(t) {
+                t.classList.toggle('active', t.getAttribute('data-tab') === tabName);
+            });
+            panels.forEach(function(p) {
+                var id = p.id;
+                var isActive = (id === 'panel-market' && tabName === 'market') ||
+                    (id === 'panel-short-emotion' && tabName === 'short-emotion') ||
+                    (id === 'panel-sector' && tabName === 'sector');
+                p.classList.toggle('active', isActive);
+            });
+            if (tabName === 'short-emotion') {
+                setTimeout(function() {
+                    chartDomIds.forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el && typeof echarts !== 'undefined') {
+                            var chart = echarts.getInstanceByDom(el);
+                            if (chart) chart.resize();
+                        }
+                    });
+                }, 50);
+            }
+        }
+
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                showPanel(tab.getAttribute('data-tab'));
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
