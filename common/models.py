@@ -1,7 +1,23 @@
 from django.db import models
 
+
+# 交易市场选项：A股、港股、美股等
+MARKET_CHOICES = [
+    ('CN', 'A股'),
+    ('HK', '港股'),
+    ('US', '美股'),
+]
+
+
 class TradingCalendar(models.Model):
-    date = models.DateField(primary_key=True, verbose_name='交易日')
+    market = models.CharField(
+        max_length=10,
+        choices=MARKET_CHOICES,
+        default='CN',
+        verbose_name='交易市场',
+        db_index=True,
+    )
+    date = models.DateField(verbose_name='交易日', db_index=True)
     open_time = models.TimeField(verbose_name='开盘时间')
     close_time = models.TimeField(verbose_name='收盘时间')
     is_trading_day = models.BooleanField(default=True, verbose_name='是否交易日')
@@ -11,7 +27,11 @@ class TradingCalendar(models.Model):
     class Meta:
         verbose_name = '交易日历'
         verbose_name_plural = '交易日历'
-        ordering = ['date']
+        ordering = ['market', 'date']
+        constraints = [
+            models.UniqueConstraint(fields=['market', 'date'], name='unique_market_date'),
+        ]
 
     def __str__(self):
-        return f'{self.date} ({"交易日" if self.is_trading_day else "非交易日"})'
+        market_label = dict(MARKET_CHOICES).get(self.market, self.market)
+        return f'{market_label} {self.date} ({"交易日" if self.is_trading_day else "非交易日"})'

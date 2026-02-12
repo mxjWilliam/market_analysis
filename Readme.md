@@ -4,5 +4,5 @@
     Must config the browser execution path in the system environment.
     Must download the browser driver and palace it in the 'web_driver' directory.
  
-<!-- 运行命令 -->
+<!-- 虚拟环境运行命令 -->
  .venv\Scripts\python.exe manage.py runserver

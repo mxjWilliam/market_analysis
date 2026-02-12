@@ -33,7 +33,7 @@
                 xAxis: { type: 'category', data: data.xAxis },
                 yAxis: { type: 'value' },
                 legend: { data: data.series.map(s => s.name), orient: 'vertical', right: 5, top: 'center' },
-                series: data.series
+                series: data.series.map(s => Object.assign({}, s, { label: { show: true, position: 'top' } }))
             });
         });
     var c = document.querySelector('.total-floor-draggable-container');

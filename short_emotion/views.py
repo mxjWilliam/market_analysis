@@ -16,11 +16,27 @@ logger = logging.getLogger(__name__)
 # Create your views here.
 
 def _get_spot_data():
-    """获取A股行情数据（东方财富接口）"""
+    """获取A股行情数据，优先东财接口，失败时自动切换新浪备选"""
+    # 1. 优先尝试东方财富接口
     try:
-        return ak.stock_zh_a_spot_em()
+        df = ak.stock_zh_a_spot_em()
+        if not df.empty and '代码' in df.columns:
+            df = df.copy()
+            df['代码'] = df['代码'].astype(str).str.replace(r'\.\w+$', '', regex=True).str.zfill(6)
+        return df
     except Exception as e:
-        logger.error(f"获取A股行情数据失败: {e}")
+        logger.warning(f"东方财富行情接口失败，切换新浪备选: {e}")
+    # 2. 备选：新浪财经接口
+    try:
+        df = ak.stock_zh_a_spot()
+        if not df.empty and '代码' in df.columns:
+            df = df.copy()
+            # 新浪格式为 sz000001/sh600000/bj430017，提取后6位为股票代码
+            df['代码'] = df['代码'].astype(str).str[-6:]
+            logger.info("已使用新浪财经行情数据")
+        return df if not df.empty else pd.DataFrame()
+    except Exception as e:
+        logger.error(f"新浪备选行情接口也失败: {e}")
         return pd.DataFrame()
 
 
@@ -31,8 +47,8 @@ def _get_trading_date_str(dt):
 
 # 插入短线情绪数据
 def add_short_emotion_data(request):
-    # 获取最近的A股交易日
-    today = get_latest_trading_date()
+    # 获取最近的 A 股交易日
+    today = get_latest_trading_date(market='CN')
     date_str = _get_trading_date_str(today)
     try:
         # 初始化数据
@@ -72,7 +88,7 @@ def add_short_emotion_data(request):
                     pool.columns = ['代码', '涨停价']
                     pool['代码'] = pool['代码'].astype(str).str.zfill(6)
                     spot = stock_zh_a_spot_df[['代码', '最高', '最低']].copy()
-                    spot['代码'] = spot['代码'].astype(str).str.replace(r'\.\w+$', '', regex=True).str.zfill(6)
+                    # 代码已在 _get_spot_data 中统一归一化为6位
                     merged = pool.merge(spot, on='代码', how='left')
                     high = pd.to_numeric(merged['最高'], errors='coerce')
                     low = pd.to_numeric(merged['最低'], errors='coerce')
@@ -147,28 +163,24 @@ def total_floor_data(request):
     # 查询 trading_date 在近30天内的数据
     recent_data = UpDonwNumber.objects.filter(trading_date__gte=thirty_days_ago, trading_date__lte=today)
     xAxis = []
-    up_floor_data = {'name': '连板总数', 'type': 'line', 'data': []}
-    twenty_up_floor_data = {'name': '连板', 'type': 'line', 'data': []}
-    thirty_up_floor_data = {'name': '2连板', 'type': 'line', 'data': []}
-    fourty_up_floor_data = {'name': '3连板', 'type': 'line', 'data': []}
+    twenty_up_floor_data = {'name': '2连板', 'type': 'line', 'data': []}
+    thirty_up_floor_data = {'name': '3连板', 'type': 'line', 'data': []}
+    fourty_up_floor_data = {'name': '4连板', 'type': 'line', 'data': []}
     up_gt_fourty_floor_data = {'name': '4连板及以上', 'type': 'line', 'data': []}
     for record in recent_data:
         xAxis.append(record.trading_date)
-        total_floor_number = (record.up_twenty_number + record.up_thirty_number +
-                              record.up_fourty_number + record.up_gt_fourty_number)
-        up_floor_data['data'].append(total_floor_number)
         twenty_up_floor_data['data'].append(record.up_twenty_number)
         thirty_up_floor_data['data'].append(record.up_thirty_number)
         fourty_up_floor_data['data'].append(record.up_fourty_number)
         up_gt_fourty_floor_data['data'].append(record.up_gt_fourty_number)
     data = {
         'xAxis': xAxis,
-        'series': [up_floor_data,
-                   twenty_up_floor_data,
-                   thirty_up_floor_data,
-                   fourty_up_floor_data,
-                   up_gt_fourty_floor_data
-                   ]
+        'series': [
+            twenty_up_floor_data,
+            thirty_up_floor_data,
+            fourty_up_floor_data,
+            up_gt_fourty_floor_data
+        ]
     }
     return JsonResponse(data)
 
