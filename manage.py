@@ -1,7 +1,19 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+
+# 修复 Windows 终端中文乱码：统一使用 UTF-8 输出
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 
 def main():
